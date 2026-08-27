@@ -4,19 +4,26 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.gembyte.poslite.components.composables.AppDrawer
+import com.gembyte.poslite.data.local.db.DatabaseProvider
 import com.gembyte.poslite.ui.navigation.AppDestination
 import com.gembyte.poslite.ui.screens.home.HomeScreen
 import com.gembyte.poslite.ui.screens.auth.PinScreen
 import com.gembyte.poslite.ui.screens.auth.SplashScreen
-import com.gembyte.poslite.ui.screens.credit.CreditScreen
+import com.gembyte.poslite.ui.screens.company.CompanyScreen
 import com.gembyte.poslite.ui.screens.customer.CustomerScreen
 import com.gembyte.poslite.ui.screens.product.ProductScreen
+import com.gembyte.poslite.ui.screens.product.editProductDetail.BulkProductScreen
+import com.gembyte.poslite.ui.screens.product.editProductDetail.BulkProductViewModel
+import com.gembyte.poslite.ui.screens.product.editProductDetail.BulkProductViewModelFactory
 import com.gembyte.poslite.ui.screens.reports.ReportScreen
 import kotlinx.coroutines.launch
 
@@ -49,9 +56,6 @@ fun App() {
 
             AppDestination.Reports::class.qualifiedName ->
                 AppDestination.Reports
-
-            AppDestination.CreditSales::class.qualifiedName ->
-                AppDestination.CreditSales
 
             else -> null
         },
@@ -116,20 +120,51 @@ fun App() {
                 ProductScreen(
                     onBackPressed = {
                         navController.popBackStack()
+                    },
+                    onBulkEditClick = {
+                        navController.navigate(
+                            AppDestination.BulkProducts
+                        )
                     }
                 )
             }
 
-            composable<AppDestination.Reports> {
-                ReportScreen(
+            composable<AppDestination.BulkProducts> {
+
+                val context = LocalContext.current
+
+                val db = remember {
+                    DatabaseProvider.getDatabase(context)
+                }
+
+                val factory = remember {
+                    BulkProductViewModelFactory(
+                        productDao = db.productDao(),
+                        companyDao = db.companyDao()
+                    )
+                }
+
+                val viewModel: BulkProductViewModel =
+                    viewModel(factory = factory)
+
+                BulkProductScreen(
+                    viewModel = viewModel,
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable<AppDestination.Companies> {
+                CompanyScreen (
                     onBackPressed = {
                         navController.popBackStack()
                     }
                 )
             }
 
-            composable<AppDestination.CreditSales> {
-                CreditScreen(
+            composable<AppDestination.Reports> {
+                ReportScreen(
                     onBackPressed = {
                         navController.popBackStack()
                     }

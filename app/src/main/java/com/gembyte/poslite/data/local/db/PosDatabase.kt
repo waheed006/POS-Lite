@@ -10,12 +10,11 @@ import androidx.room.RoomDatabase
 
 import androidx.room.TypeConverters
 import com.gembyte.poslite.data.local.converter.RoomConverters
+import com.gembyte.poslite.data.local.dao.CompanyDao
 import com.gembyte.poslite.data.local.dao.CustomerDao
 import com.gembyte.poslite.data.local.dao.InventoryUpdateDao
-import com.gembyte.poslite.data.local.dao.LedgerDao
+import com.gembyte.poslite.data.local.entity.CompanyEntity
 import com.gembyte.poslite.data.local.entity.CustomerEntity
-import com.gembyte.poslite.data.local.entity.CustomerLedgerEntity
-import com.gembyte.poslite.data.local.entity.CustomerLedgerItemEntity
 import com.gembyte.poslite.data.local.entity.InventoryUpdateEntity
 import com.gembyte.poslite.data.local.entity.SaleBillEntity
 
@@ -25,11 +24,10 @@ import com.gembyte.poslite.data.local.entity.SaleBillEntity
         SaleBillEntity::class,
         SaleItemEntity::class,
         CustomerEntity::class,
-        CustomerLedgerEntity::class,
-        CustomerLedgerItemEntity::class,
-        InventoryUpdateEntity::class
+        InventoryUpdateEntity::class,
+        CompanyEntity::class
     ],
-    version = 2
+    version = 6
 )
 
 @TypeConverters(RoomConverters::class)
@@ -37,6 +35,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun salesDao(): SalesDao
     abstract fun customerDao(): CustomerDao
-    abstract fun ledgerDao(): LedgerDao
     abstract fun inventoryUpdateDao(): InventoryUpdateDao
+    abstract fun companyDao(): CompanyDao
 }

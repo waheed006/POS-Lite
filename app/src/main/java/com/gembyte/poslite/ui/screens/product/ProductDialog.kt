@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -20,6 +21,8 @@ import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
+import com.gembyte.poslite.data.local.db.DatabaseProvider
+import com.gembyte.poslite.data.local.entity.CompanyEntity
 import com.gembyte.poslite.data.local.entity.ProductEntity
 import com.gembyte.poslite.data.model.WeightUnit
 import java.io.File
@@ -32,70 +35,80 @@ fun ProductDialog(
     onSave: (ProductEntity) -> Unit
 ) {
 
-    var name by remember {
-        mutableStateOf(product?.productName ?: "")
+    val context = LocalContext.current
+
+    val db = remember {
+        DatabaseProvider.getDatabase(context)
     }
 
+    val companyDao = db.companyDao()
 
-    var imageUri by remember {
-        mutableStateOf(product?.productImage)
-    }
+    val companies by companyDao
+        .getCompanies()
+        .collectAsState(initial = emptyList())
 
-    val cropLauncher =
-        rememberLauncherForActivityResult(CropImageContract()) { result ->
-            if (result.isSuccessful) {
-                imageUri = result.uriContent?.toString()
-            }
-        }
+    /*
+     * ---------------------------------------------------
+     * Company
+     * ---------------------------------------------------
+     */
 
-    val galleryLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.GetContent()
-        ) { uri ->
-            uri?.let {
-                cropLauncher.launch(
-                    CropImageContractOptions(
-                        uri = it,
-                        cropImageOptions = CropImageOptions(
-                            guidelines = CropImageView.Guidelines.ON,
-                            fixAspectRatio = false,
-                            allowRotation = true,
-                            allowFlipping = true,
-                            cropShape = CropImageView.CropShape.RECTANGLE
-                        )
-                    )
-                )
-            }
-        }
-
-    var cameraImageUri by remember {
-        mutableStateOf<Uri?>(null)
-    }
-
-    val cameraLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.TakePicture()
-        ) { success ->
-            if (success) {
-                cameraImageUri?.let {
-                    cropLauncher.launch(
-                        CropImageContractOptions(
-                            uri = it,
-                            cropImageOptions = CropImageOptions(
-                                guidelines = CropImageView.Guidelines.ON,
-                                fixAspectRatio = false,
-                                allowRotation = true,
-                                allowFlipping = true,
-                                cropShape = CropImageView.CropShape.RECTANGLE
-                            )
-                        )
-                    )
-                }
-            }
-        }
-
-    var showImageSourceDialog by remember {
+    var companyExpanded by remember {
         mutableStateOf(false)
+    }
+
+    var selectedCompany by remember {
+        mutableStateOf<CompanyEntity?>(null)
+    }
+
+    /*
+     * For EDIT:
+     *
+     * Product already has companyId.
+     * Find that company and select it automatically.
+     *
+     * For NEW:
+     * Select first available company by default.
+     */
+    LaunchedEffect(companies, product?.companyId) {
+
+        if (companies.isNotEmpty()) {
+
+            selectedCompany =
+                if (product != null) {
+
+                    companies.firstOrNull {
+                        it.id == product.companyId
+                    }
+
+                } else {
+
+                    selectedCompany
+                        ?: companies.first()
+                }
+        }
+    }
+
+    /*
+     * ---------------------------------------------------
+     * Product fields
+     * ---------------------------------------------------
+     */
+
+    var name by remember {
+        mutableStateOf(
+            product?.productName ?: ""
+        )
+    }
+
+    var urduName by remember {
+        mutableStateOf(product?.urduName ?: "")
+    }
+
+    var barcode by remember {
+        mutableStateOf(
+            product?.barcode ?: ""
+        )
     }
 
     var purchasePrice by remember {
@@ -122,12 +135,6 @@ fun ProductDialog(
         )
     }
 
-    var discount by remember {
-        mutableStateOf(
-            product?.discount?.toString() ?: "0"
-        )
-    }
-
     var selectedUnit by remember {
         mutableStateOf(
             product?.weightUnit ?: WeightUnit.BOX
@@ -138,212 +145,524 @@ fun ProductDialog(
         mutableStateOf(false)
     }
 
-    var barcode by remember {
+    var imageUri by remember {
         mutableStateOf(
-            product?.barcode ?: ""
+            product?.productImage
         )
     }
 
+    /*
+     * ---------------------------------------------------
+     * Image picker
+     * ---------------------------------------------------
+     */
+
+    var showImageSourceDialog by remember {
+        mutableStateOf(false)
+    }
+
+    val cropLauncher =
+        rememberLauncherForActivityResult(
+            CropImageContract()
+        ) { result ->
+
+            if (result.isSuccessful) {
+
+                imageUri =
+                    result.uriContent?.toString()
+            }
+        }
+
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri ->
+
+            uri?.let {
+
+                cropLauncher.launch(
+                    CropImageContractOptions(
+                        uri = it,
+                        cropImageOptions =
+                            CropImageOptions(
+                                guidelines =
+                                    CropImageView.Guidelines.ON,
+                                fixAspectRatio = false,
+                                allowRotation = true,
+                                allowFlipping = true,
+                                cropShape =
+                                    CropImageView.CropShape.RECTANGLE
+                            )
+                    )
+                )
+            }
+        }
+
+    var cameraImageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    val cameraLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.TakePicture()
+        ) { success ->
+
+            if (success) {
+
+                cameraImageUri?.let {
+
+                    cropLauncher.launch(
+                        CropImageContractOptions(
+                            uri = it,
+                            cropImageOptions =
+                                CropImageOptions(
+                                    guidelines =
+                                        CropImageView.Guidelines.ON,
+                                    fixAspectRatio = false,
+                                    allowRotation = true,
+                                    allowFlipping = true,
+                                    cropShape =
+                                        CropImageView.CropShape.RECTANGLE
+                                )
+                        )
+                    )
+                }
+            }
+        }
+
+    /*
+     * ---------------------------------------------------
+     * Dialog
+     * ---------------------------------------------------
+     */
+
     AlertDialog(
+
         onDismissRequest = onDismiss,
+
         title = {
+
             Text(
-                if (product == null)
-                    "Add Product"
-                else
-                    "Edit Product"
+                text =
+                    if (product == null)
+                        "Add Product"
+                    else
+                        "Edit Product"
             )
         },
 
         text = {
-            Row(modifier = Modifier.fillMaxWidth()) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+
+                /*
+                 * =========================================
+                 * LEFT SIDE
+                 * =========================================
+                 */
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
                 ) {
 
-                    Card(modifier = Modifier.size(150.dp)) {
+                    /*
+                     * IMAGE
+                     */
+
+                    Card(
+                        modifier = Modifier
+                            .size(150.dp)
+                            .clickable {
+                                showImageSourceDialog = true
+                            }
+                    ) {
 
                         if (!imageUri.isNullOrEmpty()) {
+
                             AsyncImage(
                                 model = imageUri,
                                 contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable {
-                                        showImageSourceDialog = true
-                                    }
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
 
                         } else {
+
                             Box(
                                 modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                                contentAlignment =
+                                    Alignment.Center
                             ) {
+
                                 Text(
                                     text = "Set Image",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clickable {
-                                            showImageSourceDialog = true
-                                    }
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .titleMedium,
+                                    color =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primary
                                 )
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
                     }
+
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
+
+                    /*
+                     * PRODUCT NAME
+                     */
 
                     OutlinedTextField(
                         value = name,
                         onValueChange = {
                             name = it
                         },
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text("Product Name")
-                        }
+                        },
+                        singleLine = true
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = urduName,
+                        onValueChange = {
+                            urduName = it
+                        },
+                        label = {
+                            Text("Urdu Name")
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    /*
+                     * BARCODE
+                     */
 
                     OutlinedTextField(
                         value = barcode,
                         onValueChange = {
                             barcode = it
                         },
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text("Barcode")
-                        }
+                        },
+                        singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    /*
+                     * PURCHASE PRICE
+                     */
 
                     OutlinedTextField(
                         value = purchasePrice,
                         onValueChange = {
                             purchasePrice = it
                         },
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text("Purchase Price")
                         },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number
-                        )
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType =
+                                    KeyboardType.Decimal
+                            ),
+                        singleLine = true
                     )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(
+                    modifier = Modifier.width(16.dp)
+                )
+
+                /*
+                 * =========================================
+                 * RIGHT SIDE
+                 * =========================================
+                 */
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                )
-                {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
+                ) {
+
+                    /*
+                     * WHOLESALE PRICE
+                     */
 
                     OutlinedTextField(
                         value = wholesalePrice,
                         onValueChange = {
                             wholesalePrice = it
                         },
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text("Wholesale Price")
                         },
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType =
-                                    KeyboardType.Number
-                            )
+                                    KeyboardType.Decimal
+                            ),
+                        singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    /*
+                     * RETAIL PRICE
+                     */
 
                     OutlinedTextField(
                         value = retailPrice,
                         onValueChange = {
                             retailPrice = it
                         },
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text("Retail Price")
                         },
-                        keyboardOptions = KeyboardOptions(
+                        keyboardOptions =
+                            KeyboardOptions(
                                 keyboardType =
-                                    KeyboardType.Number
-                            )
+                                    KeyboardType.Decimal
+                            ),
+                        singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    /*
+                     * QUANTITY
+                     */
 
                     OutlinedTextField(
                         value = quantity,
                         onValueChange = {
                             quantity = it
                         },
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
                             Text("Quantity")
-                        },
-                        keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = discount,
-                        onValueChange = {
-                            discount = it
-                        },
-                        label = {
-                            Text("Discount")
                         },
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType =
                                     KeyboardType.Number
-                            )
+                            ),
+                        singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    /*
+                     * COMPANY DROPDOWN
+                     *
+                     * This replaces Discount.
+                     */
 
                     ExposedDropdownMenuBox(
-                        expanded = unitExpanded,
+
+                        expanded = companyExpanded,
+
                         onExpandedChange = {
-                            unitExpanded = !unitExpanded
-                        }
+
+                            companyExpanded =
+                                !companyExpanded
+                        },
+
+                        modifier = Modifier.fillMaxWidth()
                     ) {
 
                         OutlinedTextField(
-                            value = selectedUnit.name,
+
+                            value =
+                                selectedCompany?.name
+                                    ?: "Select Company",
+
                             onValueChange = {},
+
                             readOnly = true,
+
                             label = {
-                                Text("Unit")
+                                Text("Company")
                             },
-                            modifier = Modifier.menuAnchor()
+
+                            trailingIcon = {
+
+                                ExposedDropdownMenuDefaults
+                                    .TrailingIcon(
+                                        expanded =
+                                            companyExpanded
+                                    )
+                            },
+
+                            modifier =
+                                Modifier
+                                    .menuAnchor(
+                                        MenuAnchorType.PrimaryNotEditable
+                                    )
+                                    .fillMaxWidth(),
+
+                            isError =
+                                companies.isEmpty()
                         )
 
                         ExposedDropdownMenu(
+
+                            expanded = companyExpanded,
+
+                            onDismissRequest = {
+                                companyExpanded = false
+                            }
+                        ) {
+
+                            if (companies.isEmpty()) {
+
+                                DropdownMenuItem(
+
+                                    text = {
+                                        Text(
+                                            "No companies available"
+                                        )
+                                    },
+
+                                    onClick = {
+                                        companyExpanded = false
+                                    }
+                                )
+
+                            } else {
+
+                                companies.forEach { company ->
+
+                                    DropdownMenuItem(
+
+                                        text = {
+                                            Text(
+                                                company.name
+                                            )
+                                        },
+
+                                        onClick = {
+
+                                            selectedCompany =
+                                                company
+
+                                            companyExpanded =
+                                                false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    /*
+                     * UNIT
+                     */
+
+                    ExposedDropdownMenuBox(
+
+                        expanded = unitExpanded,
+
+                        onExpandedChange = {
+
+                            unitExpanded =
+                                !unitExpanded
+                        },
+
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+
+                        OutlinedTextField(
+
+                            value =
+                                selectedUnit.name,
+
+                            onValueChange = {},
+
+                            readOnly = true,
+
+                            label = {
+                                Text("Unit")
+                            },
+
+                            trailingIcon = {
+
+                                ExposedDropdownMenuDefaults
+                                    .TrailingIcon(
+                                        expanded =
+                                            unitExpanded
+                                    )
+                            },
+
+                            modifier =
+                                Modifier
+                                    .menuAnchor(
+                                        MenuAnchorType.PrimaryNotEditable
+                                    )
+                                    .fillMaxWidth()
+                        )
+
+                        ExposedDropdownMenu(
+
                             expanded = unitExpanded,
+
                             onDismissRequest = {
                                 unitExpanded = false
                             }
                         ) {
 
-                            WeightUnit.entries.forEach {
+                            WeightUnit.entries.forEach { unit ->
 
                                 DropdownMenuItem(
+
                                     text = {
-                                        Text(it.name)
+                                        Text(
+                                            unit.name
+                                        )
                                     },
+
                                     onClick = {
 
-                                        selectedUnit = it
-                                        unitExpanded = false
+                                        selectedUnit =
+                                            unit
+
+                                        unitExpanded =
+                                            false
                                     }
                                 )
                             }
@@ -353,27 +672,47 @@ fun ProductDialog(
             }
         },
 
+        /*
+         * =========================================
+         * SAVE
+         * =========================================
+         */
+
         confirmButton = {
+
             TextButton(
+
+                enabled =
+                    name.isNotBlank() &&
+                            selectedCompany != null,
+
                 onClick = {
 
-                    val item = ProductEntity(
-                        id = product?.id ?: 0,
-                        productName = name,
-                        purchasePrice = purchasePrice.toDoubleOrNull() ?: 0.0,
-                        wholesalePrice = wholesalePrice.toDoubleOrNull() ?: 0.0,
-                        retailPrice = retailPrice.toDoubleOrNull() ?: 0.0,
-                        quantity = quantity.toIntOrNull() ?: 0,
-                        discount = discount.toDoubleOrNull() ?: 0.0,
-                        weightUnit = selectedUnit,
-                        addDate = System.currentTimeMillis(),
-                        productImage = imageUri,
-                        barcode = barcode,
-                    )
+                    val company =
+                        selectedCompany
+                            ?: return@TextButton
+
+                    val item =
+                        ProductEntity(
+                            id = product?.id ?: 0,
+                            companyId = company.id,
+                            productName = name.trim(),
+                            urduName = urduName.trim(),
+                            barcode = barcode.trim(),
+                            purchasePrice = purchasePrice.toDoubleOrNull() ?: 0.0,
+                            wholesalePrice = wholesalePrice.toDoubleOrNull() ?: 0.0,
+                            retailPrice = retailPrice.toDoubleOrNull() ?: 0.0,
+                            weightUnit = selectedUnit,
+                            quantity = quantity.toIntOrNull() ?: 0,
+                            discount = 0.0,
+                            addDate = product?.addDate ?: System.currentTimeMillis(),
+                            productImage = imageUri
+                        )
 
                     onSave(item)
                 }
             ) {
+
                 Text("Save")
             }
         },
@@ -387,29 +726,48 @@ fun ProductDialog(
         }
     )
 
+    /*
+     * =========================================
+     * IMAGE SOURCE DIALOG
+     * =========================================
+     */
+
     if (showImageSourceDialog) {
 
-        val context = LocalContext.current
-
         AlertDialog(
+
             onDismissRequest = {
                 showImageSourceDialog = false
             },
-            title = { Text("Select Image Source") },
+
+            title = {
+                Text("Select Image Source")
+            },
+
             text = {
 
                 Column {
 
                     Button(
-                        modifier = Modifier.fillMaxWidth(),
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
                         onClick = {
-                            showImageSourceDialog = false
-                            cameraImageUri = createImageUri(context)
-                            cameraLauncher.launch(cameraImageUri!!)
+
+                            showImageSourceDialog =
+                                false
+
+                            cameraImageUri =
+                                createImageUri(context)
+
+                            cameraLauncher.launch(
+                                cameraImageUri!!
+                            )
                         }
                     ) {
-                        Text("📷 Camera")
 
+                        Text("📷 Camera")
                     }
 
                     Spacer(
@@ -417,12 +775,21 @@ fun ProductDialog(
                     )
 
                     Button(
-                        modifier = Modifier.fillMaxWidth(),
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
                         onClick = {
-                            showImageSourceDialog = false
-                            galleryLauncher.launch("image/*")
+
+                            showImageSourceDialog =
+                                false
+
+                            galleryLauncher.launch(
+                                "image/*"
+                            )
                         }
                     ) {
+
                         Text("🖼 Gallery")
                     }
                 }

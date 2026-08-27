@@ -30,18 +30,4 @@ class RoomConverters {
     ): PaymentType {
         return PaymentType.valueOf(value)
     }
-
-    @TypeConverter
-    fun fromLedgerType(
-        value: LedgerType
-    ): String {
-        return value.name
-    }
-
-    @TypeConverter
-    fun toLedgerType(
-        value: String
-    ): LedgerType {
-        return LedgerType.valueOf(value)
-    }
 }

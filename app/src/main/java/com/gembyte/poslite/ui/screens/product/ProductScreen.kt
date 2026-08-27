@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,7 +35,10 @@ import com.gembyte.poslite.ui.theme.blueLight
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProductScreen(onBackPressed: () -> Unit) {
+fun ProductScreen(
+    onBackPressed: () -> Unit,
+    onBulkEditClick: () -> Unit
+) {
 
     val context = LocalContext.current
 
@@ -131,6 +135,17 @@ fun ProductScreen(onBackPressed: () -> Unit) {
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(
+                    onClick = onBulkEditClick
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.EditNote,
+                        contentDescription = "Bulk Edit Products"
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
 
                 var filterExpanded by remember {
                     mutableStateOf(false)

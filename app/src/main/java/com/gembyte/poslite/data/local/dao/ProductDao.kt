@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 interface ProductDao {
 
     @Query("SELECT * FROM products ORDER BY productName")
-
     fun getProducts(): Flow<List<ProductEntity>>
 
     @Insert
@@ -27,9 +26,6 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE id=:id")
     suspend fun getProduct(id: Long): ProductEntity?
 
-    @Query("SELECT SUM(purchasePrice * quantity) FROM products")
-    fun getInventoryValue(): Flow<Double?>
-
     @Query("SELECT * FROM products")
     suspend fun getAllProducts(): List<ProductEntity>
 
@@ -38,4 +34,16 @@ interface ProductDao {
 
     @Query(" SELECT * FROM products WHERE id=:id LIMIT 1")
     suspend fun getById(id: Long): ProductEntity?
+
+    @Query(
+        """
+    SELECT *
+    FROM products
+    WHERE companyId=:companyId
+    ORDER BY productName
+    """
+    )
+    fun getProductsByCompany(
+        companyId: Long
+    ): Flow<List<ProductEntity>>
 }

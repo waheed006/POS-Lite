@@ -1000,7 +1000,8 @@ private suspend fun reprintBill(
                         wholesalePrice = it.wholesalePrice,
                         retailPrice = 0.0,
                         weightUnit = WeightUnit.BOX,
-                        quantity = 0
+                        quantity = 0,
+                        companyId = 0
                     )
                 ).apply {
                     quantity = it.quantity
@@ -1009,7 +1010,8 @@ private suspend fun reprintBill(
             },
             overallDiscount = bill.bill.overallDiscount,
             finalTotal = bill.bill.totalAmount,
-            isDetailedBill = isDetailedBill
+            isDetailedBill = isDetailedBill,
+            isUrdu = false
         )
     }
 }

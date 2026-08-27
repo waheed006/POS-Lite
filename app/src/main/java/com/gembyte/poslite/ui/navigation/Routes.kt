@@ -17,10 +17,13 @@ sealed class AppDestination {
     data object Products : AppDestination()
 
     @Serializable
-    data object Reports : AppDestination()
+    data object BulkProducts : AppDestination()
 
     @Serializable
-    data object CreditSales : AppDestination()
+    data object Companies : AppDestination()
+
+    @Serializable
+    data object Reports : AppDestination()
 
     @Serializable
     data object Customers : AppDestination()

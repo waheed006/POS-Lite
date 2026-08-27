@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Factory
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.People
@@ -30,9 +31,9 @@ val drawerItems = listOf(
     ),
 
     DrawerScreen(
-        title = "Receivables",
-        route = AppDestination.CreditSales,
-        icon = Icons.Default.AttachMoney
+        title = "Company",
+        route = AppDestination.Companies,
+        icon = Icons.Default.Factory
     ),
 
     DrawerScreen(

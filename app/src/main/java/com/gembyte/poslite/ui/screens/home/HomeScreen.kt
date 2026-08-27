@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,8 +42,6 @@ import com.gembyte.poslite.components.printer.BluetoothPermissionHelper
 import com.gembyte.poslite.components.printer.ThermalPrinterHelper
 import com.gembyte.poslite.data.local.db.DatabaseProvider
 import com.gembyte.poslite.data.local.entity.CustomerEntity
-import com.gembyte.poslite.data.local.entity.CustomerLedgerEntity
-import com.gembyte.poslite.data.local.entity.CustomerLedgerItemEntity
 import com.gembyte.poslite.data.local.entity.ProductEntity
 import com.gembyte.poslite.data.local.entity.SaleBillEntity
 import com.gembyte.poslite.data.local.entity.SaleItemEntity
@@ -83,7 +82,6 @@ fun HomeScreen(
     val productDao = db.productDao()
     val salesDao = db.salesDao()
     val customerDao = db.customerDao()
-    val ledgerDao = db.ledgerDao()
 
     val products by productDao
         .getProducts()
@@ -173,10 +171,6 @@ fun HomeScreen(
     }
 
     var showOverallDiscount by remember {
-        mutableStateOf(false)
-    }
-
-    var isCreditSale by remember {
         mutableStateOf(false)
     }
 
@@ -843,6 +837,16 @@ fun HomeScreen(
             mutableStateOf(false)
         }
 
+        var printUrdu by remember {
+            mutableStateOf(false)
+        }
+
+        val totalItemDiscount = cart.sumOf {
+            it.discount * it.quantity
+        }
+
+        val totalDiscount = totalItemDiscount + overallDiscount
+
         AlertDialog(
             onDismissRequest = { showCheckoutDialog = false },
             title = {
@@ -854,37 +858,6 @@ fun HomeScreen(
                 Column {
 
                     HorizontalDivider()
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Text(
-                                text = "Credit Sale",
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-
-                            Switch(
-                                checked = isCreditSale,
-                                onCheckedChange = {
-                                    isCreditSale = it
-                                }
-                            )
-                        }
-                    }
-
-                    //if (isCreditSale) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -923,7 +896,6 @@ fun HomeScreen(
                             }
                         }
                     }
-                    //}
 
                     Card {
                         Column(
@@ -943,11 +915,36 @@ fun HomeScreen(
 
                             Row {
                                 Text(
+                                    "Item Discount",
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Text("Rs ${totalItemDiscount.toInt()}")
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Row {
+                                Text(
                                     "Bill Discount",
                                     modifier = Modifier.weight(1f)
                                 )
 
-                                Text("Rs $overallDiscount")
+                                Text("Rs ${overallDiscount.toInt()}")
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Row {
+                                Text(
+                                    "Total Discount",
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Text(
+                                    "Rs ${totalDiscount.toInt()}",
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
@@ -986,16 +983,13 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         OutlinedTextField(
-                            value =
-                                if (overallDiscount == 0.0)
-                                    ""
+                            value = if (overallDiscount == 0.0)
+                                ""
                                 else
                                     overallDiscount.toString(),
 
                             onValueChange = {
-                                overallDiscount =
-                                    it.toDoubleOrNull()
-                                        ?: 0.0
+                                overallDiscount = it.toDoubleOrNull() ?: 0.0
                             },
 
                             label = {
@@ -1025,13 +1019,73 @@ fun HomeScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+
                             Checkbox(
                                 checked = printDetailedBill,
                                 onCheckedChange = {
                                     printDetailedBill = it
                                 }
                             )
+
                             Text("Print Detailed Bill")
+                        }
+
+                        // ==================================
+                        // LANGUAGE SELECTION
+                        // Only visible for detailed bill
+                        // ==================================
+
+                        if (printDetailedBill) {
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Product Name Language",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable {
+                                        printUrdu = false
+                                    }
+                                ) {
+
+                                    RadioButton(
+                                        selected = !printUrdu,
+                                        onClick = {
+                                            printUrdu = false
+                                        }
+                                    )
+
+                                    Text("English")
+                                }
+
+                                Spacer(
+                                    modifier = Modifier.width(16.dp)
+                                )
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable {
+                                        printUrdu = true
+                                    }
+                                ) {
+
+                                    RadioButton(
+                                        selected = printUrdu,
+                                        onClick = {
+                                            printUrdu = true
+                                        }
+                                    )
+
+                                    Text("Urdu")
+                                }
+                            }
                         }
                     }
                 }
@@ -1039,276 +1093,122 @@ fun HomeScreen(
 
             confirmButton = {
 
-                Row {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
 
-                    if (isCreditSale) {
+                                // ==========================
+                                // CALCULATE PROFIT
+                                // ==========================
 
-                        TextButton(
-                            enabled = selectedCustomer != null,
-                            onClick = {
-                                scope.launch {
+                                var grossProfit = 0.0
 
-                                    val customer = selectedCustomer ?: return@launch
+                                cart.forEach {
 
-                                    // ==========================
-                                    // CALCULATE PROFIT
-                                    // ==========================
+                                    grossProfit += (
+                                            (
+                                                    it.product.wholesalePrice -
+                                                            it.discount
+                                                    ) -
+                                                    it.product.purchasePrice
+                                            ) * it.quantity
+                                }
 
-                                    var grossProfit = 0.0
+                                val totalProfit =
+                                    grossProfit - overallDiscount
 
-                                    cart.forEach {
-                                        grossProfit += (
-                                                (
-                                                        it.product.wholesalePrice -
-                                                                it.discount
-                                                        ) -
-                                                        it.product.purchasePrice
-                                                ) * it.quantity
+                                // ==========================
+                                // CREATE NORMAL BILL
+                                // (appears in reports immediately)
+                                // ==========================
+
+                                val billId = salesDao.insertBill(
+                                    SaleBillEntity(
+                                        totalAmount = finalBillAmount,
+                                        totalProfit = totalProfit,
+                                        overallDiscount = overallDiscount,
+                                        paymentType = PaymentType.CASH
+                                    )
+                                )
+
+                                // ==========================
+                                // SAVE BILL ITEMS
+                                // ==========================
+
+                                salesDao.insertItems(
+                                    cart.map {
+                                        SaleItemEntity(
+                                            billId = billId,
+                                            productId = it.product.id,
+                                            productName = it.product.productName,
+                                            purchasePrice = it.product.purchasePrice,
+                                            wholesalePrice = it.product.wholesalePrice,
+                                            quantity = it.quantity,
+                                            discount = it.discount
+                                        )
                                     }
+                                )
 
-                                    val totalProfit = grossProfit - overallDiscount
+                                // ==========================
+                                // REDUCE STOCK
+                                // ==========================
 
-                                    // ==========================
-                                    // CREATE SALE BILL
-                                    // ==========================
+                                cart.forEach {
+                                    productDao.update(
+                                        it.product.copy(
+                                            quantity = it.product.quantity - it.quantity
+                                        )
+                                    )
+                                }
 
-                                    val billId = salesDao.insertBill(
-                                        SaleBillEntity(
-                                            totalAmount = finalBillAmount,
-                                            totalProfit = totalProfit,
+                                // ==========================
+                                // Print Bill
+                                // ==========================
+
+                                val billItems = cart.toList()
+                                if (printBill) {
+
+                                    if (BluetoothPermissionHelper.hasBluetoothPermissions(
+                                            context
+                                        )
+                                    ) {
+
+                                        ThermalPrinterHelper.printBill(
+                                            context = context,
+                                            billId = billId,
+                                            billDate = System.currentTimeMillis(),
+                                            cart = billItems,
                                             overallDiscount = overallDiscount,
-                                            paymentType = PaymentType.CREDIT
+                                            finalTotal = finalBillAmount,
+                                            isDetailedBill = printDetailedBill,
+                                            isUrdu = printUrdu
                                         )
-                                    )
 
-                                    // ==========================
-                                    // SAVE BILL ITEMS
-                                    // ==========================
+                                    } else {
 
-                                    salesDao.insertItems(
-                                        cart.map {
-                                            SaleItemEntity(
-                                                billId = billId,
-                                                productId = it.product.id,
-                                                productName = it.product.productName,
-                                                purchasePrice = it.product.purchasePrice,
-                                                wholesalePrice = it.product.wholesalePrice,
-                                                quantity = it.quantity,
-                                                discount = it.discount
-                                            )
-                                        }
-                                    )
-
-                                    // ==========================
-                                    // CREATE CUSTOMER LEDGER
-                                    // ==========================
-
-                                    val ledgerId = ledgerDao.insertLedger(
-                                        CustomerLedgerEntity(
-                                            customerId = customer.id,
-                                            type = LedgerType.CREDIT,
-                                            amount = finalBillAmount,
-                                            note = "Credit Sale Bill #$billId"
-                                        )
-                                    )
-
-                                    // ==========================
-                                    // SAVE LEDGER ITEMS
-                                    // ==========================
-
-                                    ledgerDao.insertItems(
-                                        cart.map {
-                                            CustomerLedgerItemEntity(
-                                                ledgerId = ledgerId,
-                                                productId = it.product.id,
-                                                productName = it.product.productName,
-                                                quantity = it.quantity,
-                                                salePrice = it.product.wholesalePrice,
-                                                discount = it.discount
-                                            )
-                                        }
-                                    )
-
-                                    // ==========================
-                                    // REDUCE STOCK
-                                    // ==========================
-
-                                    cart.forEach {
-                                        productDao.update(
-                                            it.product.copy(
-                                                quantity = it.product.quantity - it.quantity
+                                        launcher.launch(
+                                            arrayOf(
+                                                Manifest.permission.BLUETOOTH_CONNECT,
+                                                Manifest.permission.BLUETOOTH_SCAN
                                             )
                                         )
                                     }
-
-                                    // ==========================
-                                    // RESET UI
-                                    // ==========================
-
-                                    cart.clear()
-                                    selectedCustomer = null
-                                    overallDiscount = 0.0
-                                    showOverallDiscount = false
-                                    showCheckoutDialog = false
                                 }
+                                // ==========================
+                                // RESET UI
+                                // ==========================
+
+                                cart.clear()
+                                selectedCustomer = null
+                                overallDiscount = 0.0
+                                showOverallDiscount = false
+                                showCheckoutDialog = false
                             }
-
-                        ) {
-                            Text("Save Credit")
-                        }
-
-                    } else {
-
-                        TextButton(
-                            onClick = {
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-
-                                        // ==========================
-                                        // CALCULATE PROFIT
-                                        // ==========================
-
-                                        var grossProfit = 0.0
-
-                                        cart.forEach {
-
-                                            grossProfit += (
-                                                    (
-                                                            it.product.wholesalePrice -
-                                                                    it.discount
-                                                            ) -
-                                                            it.product.purchasePrice
-                                                    ) * it.quantity
-                                        }
-
-                                        val totalProfit =
-                                            grossProfit - overallDiscount
-
-                                        // ==========================
-                                        // CREATE NORMAL BILL
-                                        // (appears in reports immediately)
-                                        // ==========================
-
-                                        val billId = salesDao.insertBill(
-                                            SaleBillEntity(
-                                                totalAmount = finalBillAmount,
-                                                totalProfit = totalProfit,
-                                                overallDiscount = overallDiscount,
-                                                paymentType = PaymentType.CASH
-                                            )
-                                        )
-
-                                        // ==========================
-                                        // SAVE BILL ITEMS
-                                        // ==========================
-
-                                        salesDao.insertItems(
-                                            cart.map {
-                                                SaleItemEntity(
-                                                    billId = billId,
-                                                    productId = it.product.id,
-                                                    productName = it.product.productName,
-                                                    purchasePrice = it.product.purchasePrice,
-                                                    wholesalePrice = it.product.wholesalePrice,
-                                                    quantity = it.quantity,
-                                                    discount = it.discount
-                                                )
-                                            }
-                                        )
-
-                                        // ==========================
-                                        // CUSTOMER RECEIVABLE ENTRY
-                                        // ==========================
-
-                                        val customer = selectedCustomer
-
-                                        val ledgerId = ledgerDao.insertLedger(
-                                            CustomerLedgerEntity(
-                                                customerId = customer?.id ?: 0,
-                                                type = LedgerType.PAYMENT,
-                                                amount = finalBillAmount,
-                                                note = "Bill #$billId"
-                                            )
-                                        )
-
-                                        // ==========================
-                                        // SAVE PRODUCTS INSIDE LEDGER
-                                        // ==========================
-
-                                        ledgerDao.insertItems(
-
-                                            cart.map {
-                                                CustomerLedgerItemEntity(
-                                                    ledgerId = ledgerId,
-                                                    productId = it.product.id,
-                                                    productName = it.product.productName,
-                                                    quantity = it.quantity,
-                                                    salePrice = it.product.wholesalePrice,
-                                                    discount = it.discount
-                                                )
-                                            }
-                                        )
-
-                                        // ==========================
-                                        // REDUCE STOCK
-                                        // ==========================
-
-                                        cart.forEach {
-                                            productDao.update(
-                                                it.product.copy(
-                                                    quantity = it.product.quantity - it.quantity
-                                                )
-                                            )
-                                        }
-
-                                        // ==========================
-                                        // Print Bill
-                                        // ==========================
-
-                                        val billItems = cart.toList()
-                                        if (printBill) {
-
-                                            if (BluetoothPermissionHelper.hasBluetoothPermissions(
-                                                    context
-                                                )
-                                            ) {
-
-                                                ThermalPrinterHelper.printBill(
-                                                    context = context,
-                                                    billId = billId,
-                                                    billDate = System.currentTimeMillis(),
-                                                    cart = billItems,
-                                                    overallDiscount = overallDiscount,
-                                                    finalTotal = finalBillAmount,
-                                                    isDetailedBill = printDetailedBill
-                                                )
-
-                                            } else {
-
-                                                launcher.launch(
-                                                    arrayOf(
-                                                        Manifest.permission.BLUETOOTH_CONNECT,
-                                                        Manifest.permission.BLUETOOTH_SCAN
-                                                    )
-                                                )
-                                            }
-                                        }
-                                        // ==========================
-                                        // RESET UI
-                                        // ==========================
-
-                                        cart.clear()
-                                        selectedCustomer = null
-                                        overallDiscount = 0.0
-                                        showOverallDiscount = false
-                                        showCheckoutDialog = false
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Confirm Sale")
                         }
                     }
+                ) {
+                    Text("Confirm Sale")
                 }
             }
         )

@@ -11,7 +11,9 @@ data class ProductEntity(
 
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val companyId: Long,
     val productName: String,
+    val urduName: String = "",
     val barcode: String,
     val purchasePrice: Double,
     val wholesalePrice: Double,
